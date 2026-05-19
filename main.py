@@ -64,11 +64,18 @@ def create_task(
     return task
 
 
-@app.delete("/tasks/{task_id}", status_code=status.HTTP_204_NO_CONTENT)
-def delete_task(task_id: str):
-    if task_id not in database.tasks_db:
+@app.delete("/tasks/{task_id}", status_code=status.HTTP_200_OK)
+def delete_task(task_id: str, current_user: UserInDB = Depends(get_current_user)):
+    task = database.tasks_db.get(task_id)
+    if task is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Task not found",
         )
+    if task.owner_username != current_user.username:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Not authorized to delete this task",
+        )
     del database.tasks_db[task_id]
+    return {"message": "Task deleted successfully"}
